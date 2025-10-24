@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Workbench Sync</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      border-left: 4px solid #4CAF50;
+    }
+    input, button {
+      padding: 10px 15px;
+      margin: 5px 5px 5px 0;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { border-left: 4px solid #4CAF50; background: #e8f5e9; }
+    .error { border-left: 4px solid #f44336; background: #ffebee; }
+    .info { border-left: 4px solid #2196F3; background: #e3f2fd; }
+    label {
+      display: block;
+      margin: 10px 0 5px 0;
+      font-weight: 500;
+      color: #555;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status.success { background: #4CAF50; color: white; }
+    .status.error { background: #f44336; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Workbench Sync Tester</h1>
+
+    <div class="test-section">
+      <h3>1. Setup</h3>
+      <label>Project ID (UUID):</label>
+      <input type="text" id="projectId" placeholder="48365881-74fd-4117-bd1f-85027dec6852" style="width: 100%;">
+      <p style="color: #666; font-size: 13px; margin-top: 5px;">
+        💡 Get this from your server logs: "✅ Saved X messages to project [UUID]"
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h3>2. Test Save Workbench State</h3>
+      <label>Selected File:</label>
+      <input type="text" id="selectedFile" placeholder="src/App.tsx" value="src/App.tsx">
+
+      <label>Current View:</label>
+      <select id="currentView" style="padding: 10px; width: 200px;">
+        <option value="code">Code</option>
+        <option value="diff">Diff</option>
+        <option value="preview">Preview</option>
+      </select>
+
+      <label>Show Workbench:</label>
+      <input type="checkbox" id="showWorkbench" checked>
+
+      <br><br>
+      <button onclick="testSave()">💾 Save Workbench State</button>
+      <div id="saveResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>3. Test Load Workbench State</h3>
+      <button onclick="testLoad()">📥 Load Workbench State</button>
+      <div id="loadResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>4. Auto-Sync Test</h3>
+      <p style="color: #666;">This will save state every 5 seconds (for testing - real app uses 30s)</p>
+      <button id="autoSyncBtn" onclick="toggleAutoSync()">▶️ Start Auto-Sync Test</button>
+      <span id="autoSyncStatus"></span>
+      <div id="autoSyncResult" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    let autoSyncInterval = null;
+    let syncCount = 0;
+
+    function getProjectId() {
+      const projectId = document.getElementById('projectId').value.trim();
+      if (!projectId) {
+        alert('Please enter a Project ID first!');
+        return null;
+      }
+      return projectId;
+    }
+
+    async function testSave() {
+      const projectId = getProjectId();
+      if (!projectId) return;
+
+      const resultDiv = document.getElementById('saveResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ Saving workbench state...';
+
+      try {
+        const response = await fetch(`/api/projects/${projectId}/workbench`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            selected_file: document.getElementById('selectedFile').value,
+            current_view: document.getElementById('currentView').value,
+            show_workbench: document.getElementById('showWorkbench').checked,
+            open_files: ['src/App.tsx', 'src/index.tsx'],
+            preview_urls: ['http://localhost:5173'],
+            terminal_history: ['npm install', 'npm run dev']
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          resultDiv.className = 'result success';
+          resultDiv.textContent = '✅ SUCCESS!\n\n' + JSON.stringify(data, null, 2);
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.textContent = '❌ ERROR!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+      }
+    }
+
+    async function testLoad() {
+      const projectId = getProjectId();
+      if (!projectId) return;
+
+      const resultDiv = document.getElementById('loadResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ Loading workbench state...';
+
+      try {
+        const response = await fetch(`/api/projects/${projectId}/workbench`);
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.workbench) {
+            resultDiv.className = 'result success';
+            resultDiv.textContent = '✅ LOADED!\n\n' + JSON.stringify(data.workbench, null, 2);
+
+            // Populate form with loaded data
+            if (data.workbench.selected_file) {
+              document.getElementById('selectedFile').value = data.workbench.selected_file;
+            }
+            if (data.workbench.current_view) {
+              document.getElementById('currentView').value = data.workbench.current_view;
+            }
+            if (typeof data.workbench.show_workbench === 'boolean') {
+              document.getElementById('showWorkbench').checked = data.workbench.show_workbench;
+            }
+          } else {
+            resultDiv.className = 'result info';
+            resultDiv.textContent = '⚠️ No workbench state found for this project.\n\nTry saving first!';
+          }
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.textContent = '❌ ERROR!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+      }
+    }
+
+    function toggleAutoSync() {
+      const btn = document.getElementById('autoSyncBtn');
+      const statusSpan = document.getElementById('autoSyncStatus');
+      const resultDiv = document.getElementById('autoSyncResult');
+
+      if (autoSyncInterval) {
+        // Stop
+        clearInterval(autoSyncInterval);
+        autoSyncInterval = null;
+        btn.textContent = '▶️ Start Auto-Sync Test';
+        statusSpan.innerHTML = '<span class="status error">Stopped</span>';
+        syncCount = 0;
+      } else {
+        // Start
+        const projectId = getProjectId();
+        if (!projectId) return;
+
+        resultDiv.style.display = 'block';
+        btn.textContent = '⏸️ Stop Auto-Sync Test';
+        statusSpan.innerHTML = '<span class="status success">Running</span>';
+        syncCount = 0;
+
+        // Sync every 5 seconds (for testing)
+        autoSyncInterval = setInterval(async () => {
+          syncCount++;
+          const timestamp = new Date().toLocaleTimeString();
+          resultDiv.className = 'result info';
+          resultDiv.textContent = `⏳ Auto-sync #${syncCount} at ${timestamp}...\n` + resultDiv.textContent;
+
+          try {
+            const response = await fetch(`/api/projects/${projectId}/workbench`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                selected_file: document.getElementById('selectedFile').value,
+                current_view: document.getElementById('currentView').value,
+                show_workbench: document.getElementById('showWorkbench').checked,
+                open_files: ['src/App.tsx'],
+                preview_urls: ['http://localhost:5173'],
+                terminal_history: []
+              })
+            });
+
+            if (response.ok) {
+              resultDiv.textContent = `✅ Auto-sync #${syncCount} SUCCESS at ${timestamp}\n` + resultDiv.textContent;
+            } else {
+              const error = await response.json();
+              resultDiv.textContent = `❌ Auto-sync #${syncCount} FAILED at ${timestamp}: ${error.error}\n` + resultDiv.textContent;
+            }
+          } catch (error) {
+            resultDiv.textContent = `❌ Auto-sync #${syncCount} ERROR at ${timestamp}: ${error.message}\n` + resultDiv.textContent;
+          }
+        }, 5000); // 5 seconds for testing
+      }
+    }
+  </script>
+</body>
+</html>

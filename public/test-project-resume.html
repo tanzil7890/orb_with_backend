@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Project Resume</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      border-left: 4px solid #2196F3;
+    }
+    input, button {
+      padding: 10px 15px;
+      margin: 5px 5px 5px 0;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+    button {
+      background: #2196F3;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #1976D2;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success { border-left: 4px solid #4CAF50; background: #e8f5e9; }
+    .error { border-left: 4px solid #f44336; background: #ffebee; }
+    .info { border-left: 4px solid #2196F3; background: #e3f2fd; }
+    label {
+      display: block;
+      margin: 10px 0 5px 0;
+      font-weight: 500;
+      color: #555;
+    }
+    .instructions {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    .step {
+      margin: 10px 0;
+      padding: 10px;
+      background: white;
+      border-radius: 4px;
+    }
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #2196F3;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Project Resume/Restore Tester (PHASE 6)</h1>
+
+    <div class="instructions">
+      <h3>📋 How to Test Cross-Device Sync</h3>
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Create a project on Device/Browser 1:</strong>
+        <ul>
+          <li>Open the app and send some chat messages</li>
+          <li>Create some files</li>
+          <li>Wait for sync (check console logs)</li>
+          <li>Copy the Project ID from console logs</li>
+        </ul>
+      </div>
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Clear IndexedDB (simulate new device):</strong>
+        <ul>
+          <li>Open DevTools → Application → IndexedDB</li>
+          <li>Delete "boltHistory" database</li>
+          <li>This simulates opening on a new device</li>
+        </ul>
+      </div>
+      <div class="step">
+        <span class="step-number">3</span>
+        <strong>Test restore below:</strong>
+        <ul>
+          <li>Enter your Project ID</li>
+          <li>Click "Load Project from Supabase"</li>
+          <li>Should restore messages, files, and workbench!</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>1. Test Load Full Project</h3>
+      <label>Project ID (UUID):</label>
+      <input type="text" id="projectId" placeholder="c3674383-2d87-440c-8308-02633bc04888" style="width: 100%;">
+      <p style="color: #666; font-size: 13px; margin-top: 5px;">
+        💡 Get this from browser console: "🔄 File sync started for project: [UUID]"
+      </p>
+      <br>
+      <button onclick="testLoadProject()">📥 Load Project from Supabase</button>
+      <div id="loadResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>2. Test Restore Flow</h3>
+      <p style="color: #666;">This simulates what happens when you open a chat URL with empty IndexedDB</p>
+      <button onclick="testRestoreFlow()">🔄 Test Full Restore Flow</button>
+      <div id="restoreResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>3. Navigate to Project (Real Test)</h3>
+      <p style="color: #666;">This will navigate to the chat page and trigger the real restore logic</p>
+      <button onclick="navigateToProject()">🚀 Navigate to Project</button>
+      <p style="color: #999; font-size: 13px; margin-top: 10px;">
+        ⚠️ Make sure you've cleared IndexedDB first!
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h3>4. Check What's in IndexedDB</h3>
+      <button onclick="checkIndexedDB()">🔍 Check IndexedDB</button>
+      <div id="dbResult" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    function getProjectId() {
+      const projectId = document.getElementById('projectId').value.trim();
+      if (!projectId) {
+        alert('Please enter a Project ID first!');
+        return null;
+      }
+      return projectId;
+    }
+
+    async function testLoadProject() {
+      const projectId = getProjectId();
+      if (!projectId) return;
+
+      const resultDiv = document.getElementById('loadResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ Loading project from Supabase...';
+
+      try {
+        const response = await fetch(`/api/projects/${projectId}/load`);
+        const data = await response.json();
+
+        if (response.ok) {
+          resultDiv.className = 'result success';
+          resultDiv.textContent = '✅ PROJECT LOADED!\n\n' +
+            `Project: ${data.project.title}\n` +
+            `Messages: ${data.messages.length}\n` +
+            `Files: ${Object.keys(data.files).length}\n` +
+            `Workbench: ${data.workbench ? 'Yes' : 'No'}\n\n` +
+            'Full Response:\n' + JSON.stringify(data, null, 2);
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.textContent = '❌ ERROR!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+      }
+    }
+
+    async function testRestoreFlow() {
+      const projectId = getProjectId();
+      if (!projectId) return;
+
+      const resultDiv = document.getElementById('restoreResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ Testing restore flow...\n';
+
+      try {
+        // Step 1: Load from API
+        resultDiv.textContent += '\n📥 Step 1: Loading from Supabase API...';
+        const response = await fetch(`/api/projects/${projectId}/load`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load project');
+        }
+
+        resultDiv.textContent += `\n✅ Loaded: ${data.messages.length} messages, ${Object.keys(data.files).length} files`;
+
+        // Step 2: Show what would be restored
+        resultDiv.textContent += '\n\n🔄 Step 2: What would be restored:';
+        resultDiv.textContent += `\n   - Messages: ${data.messages.map(m => `${m.role}: ${m.content.substring(0, 50)}...`).join('\n              ')}`;
+        resultDiv.textContent += `\n   - Files: ${Object.keys(data.files).join(', ')}`;
+        resultDiv.textContent += `\n   - Selected File: ${data.workbench?.selected_file || 'None'}`;
+        resultDiv.textContent += `\n   - Current View: ${data.workbench?.current_view || 'None'}`;
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent += '\n\n✅ Restore flow test completed successfully!';
+        resultDiv.textContent += '\n\n💡 To see the full restore in action:';
+        resultDiv.textContent += '\n   1. Clear IndexedDB (DevTools → Application → IndexedDB → Delete boltHistory)';
+        resultDiv.textContent += '\n   2. Click "Navigate to Project" button above';
+
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent += '\n\n❌ ERROR: ' + error.message;
+      }
+    }
+
+    function navigateToProject() {
+      const projectId = getProjectId();
+      if (!projectId) return;
+
+      if (!confirm('This will navigate to the chat page. Make sure you\'ve cleared IndexedDB first!\n\nContinue?')) {
+        return;
+      }
+
+      // Navigate to the chat URL
+      window.location.href = `/chat/${projectId}`;
+    }
+
+    async function checkIndexedDB() {
+      const resultDiv = document.getElementById('dbResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ Checking IndexedDB...';
+
+      try {
+        const request = indexedDB.open('boltHistory');
+
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+          const transaction = db.transaction(['chats'], 'readonly');
+          const store = transaction.objectStore('chats');
+          const getAllRequest = store.getAll();
+
+          getAllRequest.onsuccess = () => {
+            const chats = getAllRequest.result;
+
+            if (chats.length === 0) {
+              resultDiv.className = 'result info';
+              resultDiv.textContent = '✅ IndexedDB is EMPTY\n\nThis is perfect for testing restore from Supabase!';
+            } else {
+              resultDiv.className = 'result success';
+              resultDiv.textContent = `📊 Found ${chats.length} chat(s) in IndexedDB:\n\n`;
+              chats.forEach((chat, i) => {
+                resultDiv.textContent += `${i + 1}. ${chat.id} (${chat.urlId})\n`;
+                resultDiv.textContent += `   Messages: ${chat.messages.length}\n`;
+                resultDiv.textContent += `   Description: ${chat.description}\n\n`;
+              });
+              resultDiv.textContent += '\n💡 To test restore, delete this database:';
+              resultDiv.textContent += '\n   DevTools → Application → IndexedDB → Delete "boltHistory"';
+            }
+          };
+
+          getAllRequest.onerror = () => {
+            resultDiv.className = 'result error';
+            resultDiv.textContent = '❌ Error reading IndexedDB';
+          };
+        };
+
+        request.onerror = () => {
+          resultDiv.className = 'result info';
+          resultDiv.textContent = '✅ IndexedDB does not exist (EMPTY)\n\nPerfect for testing restore!';
+        };
+
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ ERROR: ' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
