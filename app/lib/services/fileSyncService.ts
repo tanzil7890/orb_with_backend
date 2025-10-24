@@ -71,7 +71,7 @@ export class FileSyncService {
         return;
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { count: number };
       this.lastSyncedFiles = filesJson;
       console.log(`✅ Synced ${result.count} files to Supabase`);
     } catch (error) {
@@ -85,6 +85,42 @@ export class FileSyncService {
   async forceSave() {
     this.lastSyncedFiles = ''; // Force sync even if unchanged
     await this.syncFiles();
+  }
+
+  /**
+   * Sync now with keepalive (for use during page unload)
+   * Returns immediately - doesn't wait for response
+   */
+  syncNow() {
+    if (!this.projectId || !this.filesGetter) {
+      return;
+    }
+
+    try {
+      const files = this.filesGetter();
+      const filesJson = JSON.stringify(files);
+
+      // Check if files have changed
+      if (filesJson === this.lastSyncedFiles) {
+        console.log('💾 No file changes to sync on unload');
+
+        return;
+      }
+
+      console.log('📤 Syncing files on page unload...');
+
+      // Use sendBeacon for reliable sync during unload
+      const blob = new Blob([JSON.stringify({ files })], { type: 'application/json' });
+      const sent = navigator.sendBeacon(`/api/projects/${this.projectId}/files`, blob);
+
+      if (sent) {
+        console.log('✅ Files queued for sync');
+      } else {
+        console.warn('⚠️ Failed to queue files for sync');
+      }
+    } catch (error) {
+      console.error('Error in syncNow:', error);
+    }
   }
 }
 

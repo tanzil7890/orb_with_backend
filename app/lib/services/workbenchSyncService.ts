@@ -102,6 +102,55 @@ export class WorkbenchSyncService {
   }
 
   /**
+   * Sync now with keepalive (for use during page unload)
+   * Returns immediately - doesn't wait for response
+   */
+  syncNow() {
+    if (!this.projectId || !this.stateGetter) {
+      return;
+    }
+
+    try {
+      const state = this.stateGetter();
+      const stateJson = JSON.stringify(state);
+
+      // Check if state has changed
+      if (stateJson === this.lastSyncedState) {
+        console.log('💾 No workbench state changes to sync on unload');
+
+        return;
+      }
+
+      console.log('📤 Syncing workbench state on page unload...');
+
+      // Use sendBeacon for reliable sync during unload
+      const blob = new Blob(
+        [
+          JSON.stringify({
+            selected_file: state.selectedFile,
+            open_files: state.openFiles,
+            current_view: state.currentView,
+            show_workbench: state.showWorkbench,
+            terminal_history: state.terminalHistory,
+            preview_urls: state.previewUrls,
+          }),
+        ],
+        { type: 'application/json' },
+      );
+
+      const sent = navigator.sendBeacon(`/api/projects/${this.projectId}/workbench`, blob);
+
+      if (sent) {
+        console.log('✅ Workbench state queued for sync');
+      } else {
+        console.warn('⚠️ Failed to queue workbench state for sync');
+      }
+    } catch (error) {
+      console.error('Error in syncNow:', error);
+    }
+  }
+
+  /**
    * Load workbench state from Supabase
    */
   async loadState(projectId: string): Promise<WorkbenchStateData | null> {
