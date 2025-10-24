@@ -25,6 +25,9 @@ export class ProjectRestoreService {
   // Track ongoing restore operations to prevent duplicates
   private activeRestores = new Map<string, Promise<any>>();
 
+  // Track which projects have been auto-started to prevent duplicate starts
+  private autoStarted = new Set<string>();
+
   /**
    * Load project data from Supabase
    */
@@ -277,10 +280,17 @@ export class ProjectRestoreService {
       await this.restoreWorkbenchState(projectData.workbench);
 
       // Auto-start the project AFTER UI is ready (delayed for smooth UX)
-      setTimeout(async () => {
-        console.log('🚀 Auto-starting application (delayed for smooth UX)...');
-        await this.autoStartProject(projectData.files);
-      }, 1500); // Give UI time to render first
+      // Check if already auto-started for this project to prevent duplicates
+      if (!this.autoStarted.has(projectId)) {
+        this.autoStarted.add(projectId);
+
+        setTimeout(async () => {
+          console.log('🚀 Auto-starting application (delayed for smooth UX)...');
+          await this.autoStartProject(projectData.files);
+        }, 1500); // Give UI time to render first
+      } else {
+        console.log('⏭️  Skipping auto-start (already started for this project)');
+      }
 
       console.log('✅ Project restored successfully');
 
