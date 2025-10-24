@@ -45,6 +45,9 @@ export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);
 export const chatMetadata = atom<IChatMetadata | undefined>(undefined);
 
+// Project ID cache to avoid redundant API calls (module-level for access in standalone functions)
+const projectIdCache = new Map<string, string>();
+
 /**
  * Auto-start application by detecting and running setup/start commands
  */
@@ -161,6 +164,9 @@ export function useChatHistory() {
 
     // Reset auto-start lock when chat changes
     autoStartInProgress.current = false;
+
+    // Clear project cache when switching chats
+    projectIdCache.clear();
 
     if (!db) {
       setReady(true);
@@ -362,10 +368,17 @@ ${value.content}
                     } else {
                       console.log('💾 Chat already exists in IndexedDB (id or urlId match), skipping save');
 
-                      // If the existing chat has a different id, we should update the chatId to match
+                      /*
+                       * If the existing chat has a different id, keep using the mixedId (UUID) for Supabase sync
+                       * Don't switch to numeric ID as it causes NaN issues
+                       */
                       if (existingChat.id !== mixedId) {
-                        console.log(`📝 Using existing chat id: ${existingChat.id} instead of ${mixedId}`);
-                        chatId.set(existingChat.id);
+                        console.log(
+                          `📝 Found existing chat with id: ${existingChat.id}, but keeping UUID for Supabase: ${mixedId}`,
+                        );
+
+                        // Keep using the UUID for consistency with Supabase
+                        chatId.set(mixedId);
                       }
                     }
                   } catch (dbError: any) {
@@ -405,6 +418,22 @@ ${value.content}
       setReady(true);
     }
   }, [mixedId, db, navigate, searchParams]); // Added db, navigate, searchParams dependencies
+
+  // Sync files to Supabase before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Force immediate sync of files to Supabase
+      fileSyncService.syncNow();
+      workbenchSyncService.syncNow();
+      console.log('📤 Triggered sync before page unload');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   const takeSnapshot = useCallback(
     async (chatIdx: string, files: FileMap, _chatId?: string | undefined, chatSummary?: string) => {
@@ -677,8 +706,28 @@ function navigateChat(nextId: string) {
  */
 async function syncMessagesToSupabase(chatId: string, urlId: string | undefined, messages: Message[]) {
   try {
-    // Ensure project exists in Supabase
-    const projectId = await ensureProject(urlId || chatId, description.get() || 'Untitled Project');
+    // Create cache key from urlId or chatId
+    const cacheKey = urlId || chatId;
+
+    // Check cache first - avoid redundant API calls
+    let projectId = projectIdCache.get(cacheKey);
+
+    if (!projectId) {
+      // First message in this chat - fetch/create project
+      console.log(`📡 Fetching/creating project for chat: ${cacheKey}`);
+
+      const fetchedProjectId = await ensureProject(cacheKey, description.get() || 'Untitled Project');
+
+      if (fetchedProjectId) {
+        projectId = fetchedProjectId;
+
+        // Cache the result for subsequent messages
+        projectIdCache.set(cacheKey, projectId);
+        console.log(`✅ Cached project ID: ${projectId}`);
+      }
+    } else {
+      console.log(`♻️  Reusing cached project ID: ${projectId}`);
+    }
 
     if (!projectId) {
       console.warn('Could not create/find project for Supabase sync');
@@ -748,6 +797,8 @@ async function syncMessagesToSupabase(chatId: string, urlId: string | undefined,
  */
 async function ensureProject(urlId: string, title: string): Promise<string | null> {
   try {
+    console.log(`🔍 Ensuring project exists for urlId: ${urlId}`);
+
     // Try to create or get existing project
     const response = await fetch('/api/projects', {
       method: 'POST',
@@ -766,7 +817,14 @@ async function ensureProject(urlId: string, title: string): Promise<string | nul
       return null;
     }
 
-    const result = (await response.json()) as { project?: { id: string } };
+    const result = (await response.json()) as { project?: { id: string }; existed?: boolean };
+
+    // Log whether we created a new project or found existing
+    if (result.existed) {
+      console.log(`✅ Found existing project: ${result.project?.id}`);
+    } else {
+      console.log(`✅ Created new project: ${result.project?.id}`);
+    }
 
     return result.project?.id || null;
   } catch (error) {
