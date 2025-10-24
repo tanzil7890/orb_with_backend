@@ -1,4 +1,5 @@
 import ignore from 'ignore';
+import { generateId } from 'ai';
 import type { ProviderInfo } from '~/types/model';
 import type { Template } from '~/types/template';
 import { STARTER_TEMPLATES } from './constants';
@@ -183,9 +184,12 @@ export async function getTemplates(templateName: string, title?: string) {
     filesToImport.ignoreFile = ignoredFiles;
   }
 
+  // Generate a unique UUID for this project
+  const projectId = generateId();
+
   const assistantMessage = `
 Bolt is initializing your project with the required files using the ${template.name} template.
-<boltArtifact id="imported-files" title="${title || 'Create initial files'}" type="bundled">
+<boltArtifact id="${projectId}" title="${title || 'Create initial files'}" type="bundled">
 ${filesToImport.files
   .map(
     (file) =>

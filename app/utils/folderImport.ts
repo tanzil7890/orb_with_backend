@@ -34,11 +34,14 @@ export const createChatFromFolder = async (
       ? `\n\nSkipped ${binaryFiles.length} binary files:\n${binaryFiles.map((f) => `- ${f}`).join('\n')}`
       : '';
 
+  // Generate a unique UUID for this project
+  const projectId = generateId();
+
   const filesMessage: Message = {
     role: 'assistant',
     content: `I've imported the contents of the "${folderName}" folder.${binaryFilesMessage}
 
-<boltArtifact id="imported-files" title="Imported Files" type="bundled" >
+<boltArtifact id="${projectId}" title="Imported Files" type="bundled" >
 ${fileArtifacts
   .map(
     (file) => `<boltAction type="file" filePath="${file.path}">

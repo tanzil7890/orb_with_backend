@@ -112,6 +112,9 @@ export default function GitCloneButton({ importChat, className }: GitCloneButton
         const commands = await detectProjectCommands(fileContents);
         const commandsMessage = createCommandsMessage(commands);
 
+        // Generate a unique UUID for this project
+        const projectId = generateId();
+
         const filesMessage: Message = {
           role: 'assistant',
           content: `Cloning the repo ${repoUrl} into ${workdir}
@@ -122,7 +125,7 @@ ${skippedFiles.map((f) => `- ${f}`).join('\n')}`
     : ''
 }
 
-<boltArtifact id="imported-files" title="Git Cloned Files" type="bundled">
+<boltArtifact id="${projectId}" title="Git Cloned Files" type="bundled">
 ${fileContents
   .map(
     (file) =>
