@@ -19,17 +19,35 @@ export async function loader(args: LoaderFunctionArgs) {
   try {
     const supabase = getSupabaseServiceClient();
 
-    // Verify user owns this project
-    const { data: project, error: projectError } = await supabase
+    // Verify user owns this project. Support both UUID id and url_id.
+    let project: any | null = null;
+    let projectError: any | null = null;
+
+    // Try by primary id first
+    const { data: byId, error: byIdError } = await supabase
       .from('projects')
       .select('*')
       .eq('id', projectId)
       .eq('clerk_user_id', userId)
       .single();
 
-    if (projectError || !project) {
-      console.error('Project not found or access denied:', projectError);
+    if (byId && !byIdError) {
+      project = byId;
+    } else {
+      // Fallback to url_id match
+      const { data: byUrlId, error: byUrlIdError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('url_id', projectId)
+        .eq('clerk_user_id', userId)
+        .single();
 
+      project = byUrlId;
+      projectError = byUrlIdError;
+    }
+
+    if (!project) {
+      console.error('Project not found or access denied:', projectError || byIdError);
       return json({ error: 'Project not found' }, { status: 404 });
     }
 
@@ -37,7 +55,7 @@ export async function loader(args: LoaderFunctionArgs) {
     const { data: messages, error: messagesError } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id', project.id)
       .order('created_at', { ascending: true });
 
     if (messagesError) {
@@ -48,7 +66,7 @@ export async function loader(args: LoaderFunctionArgs) {
     const { data: files, error: filesError } = await supabase
       .from('project_files')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id', project.id)
       .order('file_path', { ascending: true });
 
     if (filesError) {
@@ -59,7 +77,7 @@ export async function loader(args: LoaderFunctionArgs) {
     const { data: workbench, error: workbenchError } = await supabase
       .from('workbench_states')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id', project.id)
       .single();
 
     if (workbenchError && workbenchError.code !== 'PGRST116') {
@@ -88,7 +106,7 @@ export async function loader(args: LoaderFunctionArgs) {
       };
     });
 
-    console.log(`📥 Loaded project ${projectId}:`);
+    console.log(`📥 Loaded project ${project.id}:`);
     console.log(`   - Messages: ${transformedMessages.length}`);
     console.log(`   - Files: ${Object.keys(fileMap).length}`);
     console.log(`   - Workbench: ${workbench ? 'Yes' : 'No'}`);
