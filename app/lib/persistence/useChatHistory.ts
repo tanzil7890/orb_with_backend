@@ -9,8 +9,6 @@ import {
   getMessages,
   getMessagesById,
   getMessagesByUrlId,
-  getNextId,
-  getUrlId,
   openDatabase,
   setMessages,
   duplicateChat,
@@ -297,8 +295,20 @@ ${value.content}
 
             setUrlId(storedMessages.urlId);
             description.set(storedMessages.description);
-            chatId.set(storedMessages.id);
+
+            /*
+             * IMPORTANT: Always use urlId as the primary identifier
+             * For consistency, set chatId to urlId (not numeric id)
+             */
+            const consistentId = storedMessages.urlId || storedMessages.id;
+            chatId.set(consistentId);
             chatMetadata.set(storedMessages.metadata);
+
+            // IMPORTANT: Ensure URL is consistent with urlId
+            if (consistentId !== mixedId) {
+              console.log(`🔄 Redirecting from ${mixedId} to ${consistentId} for consistency`);
+              navigateChat(consistentId);
+            }
 
             // IMPORTANT: Restore files to WebContainer from snapshot
             if (snapshot && snapshot.files && Object.keys(snapshot.files).length > 0) {
@@ -342,7 +352,16 @@ ${value.content}
                 setInitialMessages(supabaseData.messages);
                 setUrlId(supabaseData.urlId);
                 description.set(supabaseData.description || undefined);
-                chatId.set(mixedId);
+
+                // IMPORTANT: Always use urlId as the primary identifier
+                const consistentId = supabaseData.urlId || mixedId;
+                chatId.set(consistentId);
+
+                // IMPORTANT: Ensure URL is consistent with urlId
+                if (consistentId !== mixedId) {
+                  console.log(`🔄 Redirecting from ${mixedId} to ${consistentId} for consistency`);
+                  navigateChat(consistentId);
+                }
 
                 // Save to IndexedDB for future offline access (non-blocking)
                 if (db) {
@@ -564,12 +583,11 @@ ${value.content}
       messages = messages.filter((m) => !m.annotations?.includes('no-store'));
 
       let _urlId = urlId;
-
-      if (!urlId && firstArtifact?.id) {
-        const urlId = await getUrlId(db, firstArtifact.id);
-        _urlId = urlId;
-        navigateChat(urlId);
-        setUrlId(urlId);
+      // If no urlId yet, default to current route id (mixedId) to keep URL stable
+      if (!_urlId && mixedId) {
+        _urlId = mixedId;
+        setUrlId(mixedId);
+        console.log(`📝 Using route id as urlId: ${mixedId}`);
       }
 
       let chatSummary: string | undefined = undefined;
@@ -593,15 +611,11 @@ ${value.content}
         description.set(firstArtifact?.title);
       }
 
-      // Ensure chatId.get() is used here as well
+      // Set a stable chatId for IndexedDB if not present yet
       if (initialMessages.length === 0 && !chatId.get()) {
-        const nextId = await getNextId(db);
-
-        chatId.set(nextId);
-
-        if (!urlId) {
-          navigateChat(nextId);
-        }
+        const projectId = generateId();
+        chatId.set(projectId);
+        console.log(`📝 Initialized internal chatId: ${projectId}`);
       }
 
       // Ensure chatId.get() is used for the final setMessages call
@@ -614,11 +628,19 @@ ${value.content}
         return;
       }
 
+      // Decide the urlId we will commit and ensure URL reflects it on first save
+      const chosenUrlId = _urlId || finalChatId;
+      if (!urlId) {
+        // First save in a new chat session: set URL to /chat/<chosenUrlId>
+        setUrlId(chosenUrlId);
+        navigateChat(chosenUrlId);
+      }
+
       await setMessages(
         db,
-        finalChatId, // Use the potentially updated chatId
+        finalChatId,
         [...archivedMessages, ...messages],
-        urlId,
+        chosenUrlId,
         description.get(),
         undefined,
         chatMetadata.get(),
@@ -626,7 +648,7 @@ ${value.content}
 
       // Sync to Supabase
       try {
-        await syncMessagesToSupabase(finalChatId, _urlId, messages);
+        await syncMessagesToSupabase(finalChatId, chosenUrlId, messages);
       } catch (error) {
         console.error('Failed to sync messages to Supabase:', error);
         // Don't show error toast to user - it's a background sync
