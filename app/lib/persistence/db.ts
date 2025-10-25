@@ -173,14 +173,18 @@ export async function getMessagesById(db: IDBDatabase, id: string): Promise<Chat
   });
 }
 
-export async function deleteById(db: IDBDatabase, id: string): Promise<void> {
+export async function deleteById(db: IDBDatabase, idOrUrlId: string): Promise<void> {
+  // Resolve to the actual record id (supports either id or urlId input)
+  const record = await getMessages(db, idOrUrlId);
+  const realId = record?.id || idOrUrlId;
+
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['chats', 'snapshots'], 'readwrite'); // Add snapshots store to transaction
+    const transaction = db.transaction(['chats', 'snapshots'], 'readwrite');
     const chatStore = transaction.objectStore('chats');
     const snapshotStore = transaction.objectStore('snapshots');
 
-    const deleteChatRequest = chatStore.delete(id);
-    const deleteSnapshotRequest = snapshotStore.delete(id); // Also delete snapshot
+    const deleteChatRequest = chatStore.delete(realId);
+    const deleteSnapshotRequest = snapshotStore.delete(realId);
 
     let chatDeleted = false;
     let snapshotDeleted = false;
@@ -212,7 +216,7 @@ export async function deleteById(db: IDBDatabase, id: string): Promise<void> {
     };
 
     transaction.oncomplete = () => {
-      // This might resolve before checkCompletion if one operation finishes much faster
+      // no-op
     };
     transaction.onerror = () => reject(transaction.error);
   });
