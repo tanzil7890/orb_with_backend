@@ -92,7 +92,7 @@ export const Menu = () => {
 
         // Transform Supabase projects to ChatHistoryItem format
         const projectList: ChatHistoryItem[] = projects.map((project: any) => ({
-          id: project.id,
+          id: project.url_id, // Use urlId as the primary identifier for UI actions
           urlId: project.url_id,
           description: project.title, // Use title from Supabase
           messages: [], // We don't need messages for the sidebar
@@ -122,23 +122,23 @@ export const Menu = () => {
   }, [db]);
 
   const deleteChat = useCallback(
-    async (id: string): Promise<void> => {
+    async (urlId: string): Promise<void> => {
       if (!db) {
         throw new Error('Database not available');
       }
 
       // Delete chat snapshot from localStorage
       try {
-        const snapshotKey = `snapshot:${id}`;
+        const snapshotKey = `snapshot:${urlId}`;
         localStorage.removeItem(snapshotKey);
-        console.log('Removed snapshot for chat:', id);
+        console.log('Removed snapshot for chat:', urlId);
       } catch (snapshotError) {
-        console.error(`Error deleting snapshot for chat ${id}:`, snapshotError);
+        console.error(`Error deleting snapshot for chat ${urlId}:`, snapshotError);
       }
 
       // Delete the chat from the database
-      await deleteById(db, id);
-      console.log('Successfully deleted chat:', id);
+      await deleteById(db, urlId);
+      console.log('Successfully deleted chat:', urlId);
     },
     [db],
   );
@@ -151,7 +151,7 @@ export const Menu = () => {
       // Log the delete operation to help debugging
       console.log('Attempting to delete chat:', { id: item.id, description: item.description });
 
-      deleteChat(item.id)
+      deleteChat(item.urlId || item.id)
         .then(() => {
           toast.success('Chat deleted successfully', {
             position: 'bottom-right',
@@ -161,7 +161,7 @@ export const Menu = () => {
           // Always refresh the list
           loadEntries();
 
-          if (chatId.get() === item.id) {
+          if (chatId.get() === (item.urlId || item.id)) {
             // hard page navigation to clear the stores
             console.log('Navigating away from deleted chat');
             window.location.pathname = '/';
@@ -263,7 +263,7 @@ export const Menu = () => {
       return;
     }
 
-    const selectedChats = list.filter((item) => selectedItems.includes(item.id));
+      const selectedChats = list.filter((item) => selectedItems.includes(item.id));
 
     if (selectedChats.length === 0) {
       toast.error('Could not find selected chats');

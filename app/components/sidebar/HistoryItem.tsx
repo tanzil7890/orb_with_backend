@@ -104,7 +104,7 @@ export function HistoryItem({
         </form>
       ) : (
         <a
-          href={`/chat/${item.id}`}
+          href={`/chat/${item.urlId}`}
           className="flex w-full relative truncate block"
           onClick={selectionMode ? handleItemClick : undefined}
         >
@@ -122,7 +122,7 @@ export function HistoryItem({
                 icon="i-ph:download-simple h-4 w-4"
                 onClick={(event) => {
                   event.preventDefault();
-                  exportChat(item.id);
+                  exportChat(item.urlId);
                 }}
               />
               {onDuplicate && (
@@ -131,7 +131,7 @@ export function HistoryItem({
                   icon="i-ph:copy h-4 w-4"
                   onClick={(event) => {
                     event.preventDefault();
-                    onDuplicate?.(item.id);
+                    onDuplicate?.(item.urlId || item.id);
                   }}
                 />
               )}
