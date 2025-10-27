@@ -114,8 +114,8 @@ export default defineConfig({
   ],
   theme: {
     fontFamily: {
-      sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
-      mono: ['ui-monospace', 'Fira Code', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+      sans: ['Inter'],
+      mono: ['Inter'],
     },
     colors: {
       ...COLOR_PRIMITIVES,

@@ -61,7 +61,7 @@ function getEditorTheme(settings: EditorSettings) {
     },
     '.cm-gutter': {
       '&.cm-lineNumbers': {
-        fontFamily: 'Roboto Mono, monospace',
+        fontFamily: 'Inter',
         fontSize: settings.gutterFontSize ?? settings.fontSize ?? '12px',
         minWidth: '40px',
       },
