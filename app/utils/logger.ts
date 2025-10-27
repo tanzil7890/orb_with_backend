@@ -69,7 +69,7 @@ function log(level: DebugLevel, scope: string | undefined, messages: any[]) {
   }, '');
 
   const labelBackgroundColor = getColorForLevel(level);
-  const labelTextColor = level === 'warn' ? '#000000' : '#FFFFFF';
+  const labelTextColor = level === 'warn' ? '#242424' : '#fcfcfc';
 
   const labelStyles = getLabelStyles(labelBackgroundColor, labelTextColor);
   const scopeStyles = getLabelStyles('#77828D', 'white');
@@ -83,7 +83,7 @@ function log(level: DebugLevel, scope: string | undefined, messages: any[]) {
   let labelText = formatText(` ${level.toUpperCase()} `, labelTextColor, labelBackgroundColor);
 
   if (scope) {
-    labelText = `${labelText} ${formatText(` ${scope} `, '#FFFFFF', '77828D')}`;
+    labelText = `${labelText} ${formatText(` ${scope} `, '#fcfcfc', '77828D')}`;
   }
 
   if (typeof window !== 'undefined') {

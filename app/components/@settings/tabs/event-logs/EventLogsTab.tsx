@@ -504,7 +504,7 @@ export function EventLogsTab() {
       // Add title and header
       doc.setFillColor('#6366F1');
       doc.rect(0, 0, pageWidth, 50, 'F');
-      doc.setTextColor('#FFFFFF');
+      doc.setTextColor('#fcfcfc');
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
       doc.text('Event Logs Report', margin, 35);

@@ -93,7 +93,7 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
     }
 
     // Fallback for SSR
-    return isDarkMode ? '#FFFFFF' : '#000000';
+    return isDarkMode ? '#fcfcfc' : '#242424';
   };
 
   // Theme-aware chart colors with enhanced dark mode visibility using CSS variables

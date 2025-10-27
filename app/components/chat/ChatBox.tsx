@@ -94,8 +94,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           </linearGradient>
           <linearGradient id="shine-gradient">
             <stop offset="0%" stopColor="white" stopOpacity="0%"></stop>
-            <stop offset="40%" stopColor="#ffffff" stopOpacity="80%"></stop>
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="80%"></stop>
+            <stop offset="40%" stopColor="#fcfcfc" stopOpacity="80%"></stop>
+            <stop offset="50%" stopColor="#fcfcfc" stopOpacity="80%"></stop>
             <stop offset="100%" stopColor="white" stopOpacity="0%"></stop>
           </linearGradient>
         </defs>

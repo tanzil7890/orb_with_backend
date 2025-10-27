@@ -70,7 +70,7 @@ export default function VercelConnection() {
 
   return (
     <motion.div
-      className="bg-[#FFFFFF] dark:bg-[#0A0A0A] rounded-lg border border-[#E5E5E5] dark:border-[#1A1A1A]"
+      className="bg-[#fcfcfc] dark:bg-[#242424] rounded-lg border border-[#E5E5E5] dark:border-[#1A1A1A]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
