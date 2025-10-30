@@ -14,6 +14,8 @@ import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
+import { useUser } from '@clerk/remix';
+import { sidebarStore, openSidebar, closeSidebar } from '~/lib/stores/sidebar';
 
 const menuVariants = {
   closed: {
@@ -67,12 +69,13 @@ export const Menu = () => {
   const { duplicateCurrentChat, exportChat } = useChatHistory();
   const menuRef = useRef<HTMLDivElement>(null);
   const [list, setList] = useState<ChatHistoryItem[]>([]);
-  const [open, setOpen] = useState(false);
+  const open = useStore(sidebarStore);
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const profile = useStore(profileStore);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const { isSignedIn, isLoaded } = useUser();
 
   const { filteredItems: filteredList, handleSearchChange } = useSearchFilter({
     items: list,
@@ -321,11 +324,11 @@ export const Menu = () => {
       }
 
       if (event.pageX < enterThreshold) {
-        setOpen(true);
+        openSidebar();
       }
 
       if (menuRef.current && event.clientX > menuRef.current.getBoundingClientRect().right + exitThreshold) {
-        setOpen(false);
+        closeSidebar();
       }
     }
 
@@ -343,7 +346,7 @@ export const Menu = () => {
 
   const handleSettingsClick = () => {
     setIsSettingsOpen(true);
-    setOpen(false);
+    closeSidebar();
   };
 
   const handleSettingsClose = () => {
@@ -364,19 +367,19 @@ export const Menu = () => {
         variants={menuVariants}
         style={{ width: '340px' }}
         className={classNames(
-          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-2xl',
+          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded',
           'bg-white dark:bg-gray-950 border-r border-bolt-elements-borderColor',
           'shadow-sm text-sm',
           isSettingsOpen ? 'z-40' : 'z-sidebar',
         )}
       >
-        <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 rounded-tr-2xl">
+        <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 ">
           <div className="text-gray-900 dark:text-white font-medium"></div>
           <div className="flex items-center gap-3">
-            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
+            {/* <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
               {profile?.username || 'Guest User'}
-            </span>
-            <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
+            </span> */}
+            {/* <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
               {profile?.avatar ? (
                 <img
                   src={profile.avatar}
@@ -388,10 +391,10 @@ export const Menu = () => {
               ) : (
                 <div className="i-ph:user-fill text-lg" />
               )}
-            </div>
+            </div> */}
           </div>
         </div>
-        <CurrentDateTime />
+        {/* <CurrentDateTime /> */}
         <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
           <div className="p-4 space-y-3">
             <div className="flex gap-2">
@@ -428,135 +431,154 @@ export const Menu = () => {
               />
             </div>
           </div>
-          <div className="flex items-center justify-between text-sm px-4 py-2">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Your Chats</div>
-            {selectionMode && (
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={selectAll}>
-                  {selectedItems.length === filteredList.length ? 'Deselect all' : 'Select all'}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDeleteClick}
-                  disabled={selectedItems.length === 0}
-                >
-                  Delete selected
-                </Button>
-              </div>
-            )}
-          </div>
-          <div className="flex-1 overflow-auto px-3 pb-3">
-            {filteredList.length === 0 && (
-              <div className="px-4 text-gray-500 dark:text-gray-400 text-sm">
-                {list.length === 0 ? 'No previous conversations' : 'No matches found'}
-              </div>
-            )}
-            <DialogRoot open={dialogContent !== null}>
-              {binDates(filteredList).map(({ category, items }) => (
-                <div key={category} className="mt-2 first:mt-0 space-y-1">
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 sticky top-0 z-1 bg-white dark:bg-gray-950 px-4 py-1">
-                    {category}
+
+          {/* Only show chat history if user is signed in */}
+          {isLoaded && isSignedIn ? (
+            <>
+              <div className="flex items-center justify-between text-sm px-4 py-2">
+                <div className="font-medium text-gray-600 dark:text-gray-400">Your Chats</div>
+                {selectionMode && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={selectAll}>
+                      {selectedItems.length === filteredList.length ? 'Deselect all' : 'Select all'}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDeleteClick}
+                      disabled={selectedItems.length === 0}
+                    >
+                      Delete selected
+                    </Button>
                   </div>
-                  <div className="space-y-0.5 pr-1">
-                    {items.map((item) => (
-                      <HistoryItem
-                        key={item.id}
-                        item={item}
-                        exportChat={exportChat}
-                        onDelete={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          console.log('Delete triggered for item:', item);
-                          setDialogContentWithLogging({ type: 'delete', item });
-                        }}
-                        onDuplicate={() => handleDuplicate(item.id)}
-                        selectionMode={selectionMode}
-                        isSelected={selectedItems.includes(item.id)}
-                        onToggleSelection={toggleItemSelection}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <Dialog onBackdrop={closeDialog} onClose={closeDialog}>
-                {dialogContent?.type === 'delete' && (
-                  <>
-                    <div className="p-6 bg-white dark:bg-gray-950">
-                      <DialogTitle className="text-gray-900 dark:text-white">Delete Chat?</DialogTitle>
-                      <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
-                        <p>
-                          You are about to delete{' '}
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {dialogContent.item.description}
-                          </span>
-                        </p>
-                        <p className="mt-2">Are you sure you want to delete this chat?</p>
-                      </DialogDescription>
-                    </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-                      <DialogButton type="secondary" onClick={closeDialog}>
-                        Cancel
-                      </DialogButton>
-                      <DialogButton
-                        type="danger"
-                        onClick={(event) => {
-                          console.log('Dialog delete button clicked for item:', dialogContent.item);
-                          deleteItem(event, dialogContent.item);
-                          closeDialog();
-                        }}
-                      >
-                        Delete
-                      </DialogButton>
-                    </div>
-                  </>
                 )}
-                {dialogContent?.type === 'bulkDelete' && (
-                  <>
-                    <div className="p-6 bg-white dark:bg-gray-950">
-                      <DialogTitle className="text-gray-900 dark:text-white">Delete Selected Chats?</DialogTitle>
-                      <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
-                        <p>
-                          You are about to delete {dialogContent.items.length}{' '}
-                          {dialogContent.items.length === 1 ? 'chat' : 'chats'}:
-                        </p>
-                        <div className="mt-2 max-h-32 overflow-auto border border-gray-100 dark:border-gray-800 rounded-md bg-gray-50 dark:bg-gray-900 p-2">
-                          <ul className="list-disc pl-5 space-y-1">
-                            {dialogContent.items.map((item) => (
-                              <li key={item.id} className="text-sm">
-                                <span className="font-medium text-gray-900 dark:text-white">{item.description}</span>
-                              </li>
-                            ))}
-                          </ul>
+              </div>
+              <div className="flex-1 overflow-auto px-3 pb-3">
+                {filteredList.length === 0 && (
+                  <div className="px-4 text-gray-500 dark:text-gray-400 text-sm">
+                    {list.length === 0 ? 'No previous conversations' : 'No matches found'}
+                  </div>
+                )}
+                <DialogRoot open={dialogContent !== null}>
+                  {binDates(filteredList).map(({ category, items }) => (
+                    <div key={category} className="mt-2 first:mt-0 space-y-1">
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 sticky top-0 z-1 bg-white dark:bg-gray-950 px-4 py-1">
+                        {category}
+                      </div>
+                      <div className="space-y-0.5 pr-1">
+                        {items.map((item) => (
+                          <HistoryItem
+                            key={item.id}
+                            item={item}
+                            exportChat={exportChat}
+                            onDelete={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              console.log('Delete triggered for item:', item);
+                              setDialogContentWithLogging({ type: 'delete', item });
+                            }}
+                            onDuplicate={() => handleDuplicate(item.id)}
+                            selectionMode={selectionMode}
+                            isSelected={selectedItems.includes(item.id)}
+                            onToggleSelection={toggleItemSelection}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <Dialog onBackdrop={closeDialog} onClose={closeDialog}>
+                    {dialogContent?.type === 'delete' && (
+                      <>
+                        <div className="p-6 bg-white dark:bg-gray-950">
+                          <DialogTitle className="text-gray-900 dark:text-white">Delete Chat?</DialogTitle>
+                          <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
+                            <p>
+                              You are about to delete{' '}
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {dialogContent.item.description}
+                              </span>
+                            </p>
+                            <p className="mt-2">Are you sure you want to delete this chat?</p>
+                          </DialogDescription>
                         </div>
-                        <p className="mt-3">Are you sure you want to delete these chats?</p>
-                      </DialogDescription>
-                    </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-                      <DialogButton type="secondary" onClick={closeDialog}>
-                        Cancel
-                      </DialogButton>
-                      <DialogButton
-                        type="danger"
-                        onClick={() => {
-                          /*
-                           * Pass the current selectedItems to the delete function.
-                           * This captures the state at the moment the user confirms.
-                           */
-                          const itemsToDeleteNow = [...selectedItems];
-                          console.log('Bulk delete confirmed for', itemsToDeleteNow.length, 'items', itemsToDeleteNow);
-                          deleteSelectedItems(itemsToDeleteNow);
-                          closeDialog();
-                        }}
-                      >
-                        Delete
-                      </DialogButton>
-                    </div>
-                  </>
-                )}
-              </Dialog>
-            </DialogRoot>
-          </div>
+                        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+                          <DialogButton type="secondary" onClick={closeDialog}>
+                            Cancel
+                          </DialogButton>
+                          <DialogButton
+                            type="danger"
+                            onClick={(event) => {
+                              console.log('Dialog delete button clicked for item:', dialogContent.item);
+                              deleteItem(event, dialogContent.item);
+                              closeDialog();
+                            }}
+                          >
+                            Delete
+                          </DialogButton>
+                        </div>
+                      </>
+                    )}
+                    {dialogContent?.type === 'bulkDelete' && (
+                      <>
+                        <div className="p-6 bg-white dark:bg-gray-950">
+                          <DialogTitle className="text-gray-900 dark:text-white">
+                            Delete Selected Chats?
+                          </DialogTitle>
+                          <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
+                            <p>
+                              You are about to delete {dialogContent.items.length}{' '}
+                              {dialogContent.items.length === 1 ? 'chat' : 'chats'}:
+                            </p>
+                            <div className="mt-2 max-h-32 overflow-auto border border-gray-100 dark:border-gray-800 rounded-md bg-gray-50 dark:bg-gray-900 p-2">
+                              <ul className="list-disc pl-5 space-y-1">
+                                {dialogContent.items.map((item) => (
+                                  <li key={item.id} className="text-sm">
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                      {item.description}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <p className="mt-3">Are you sure you want to delete these chats?</p>
+                          </DialogDescription>
+                        </div>
+                        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+                          <DialogButton type="secondary" onClick={closeDialog}>
+                            Cancel
+                          </DialogButton>
+                          <DialogButton
+                            type="danger"
+                            onClick={() => {
+                              const itemsToDeleteNow = [...selectedItems];
+                              console.log(
+                                'Bulk delete confirmed for',
+                                itemsToDeleteNow.length,
+                                'items',
+                                itemsToDeleteNow,
+                              );
+                              deleteSelectedItems(itemsToDeleteNow);
+                              closeDialog();
+                            }}
+                          >
+                            Delete
+                          </DialogButton>
+                        </div>
+                      </>
+                    )}
+                  </Dialog>
+                </DialogRoot>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center px-4 py-8">
+              <div className="text-center space-y-3">
+                <div className="i-ph:lock-key text-4xl text-gray-400 dark:text-gray-600 mx-auto" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">Sign in to view your chat history</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 py-3">
             <SettingsButton onClick={handleSettingsClick} />
             <ThemeSwitch />
