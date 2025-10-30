@@ -139,6 +139,10 @@ export default defineConfig({
             text: 'var(--bolt-elements-code-text)',
           },
           button: {
+            default: {
+              background: 'var(--bolt-elements-button-default-background)',
+              backgroundHover: 'var(--bolt-elements-button-default-backgroundHover)',
+            },
             primary: {
               background: 'var(--bolt-elements-button-primary-background)',
               backgroundHover: 'var(--bolt-elements-button-primary-backgroundHover)',

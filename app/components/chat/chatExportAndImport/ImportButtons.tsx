@@ -59,7 +59,7 @@ export function ImportButtons(importChat: ((description: string, messages: Messa
       />
       <div className="flex flex-col items-center gap-4 max-w-2xl text-center">
         <div className="flex gap-2">
-          <Button
+          {/* <Button
             onClick={() => {
               const input = document.getElementById('chat-import');
               input?.click();
@@ -67,25 +67,23 @@ export function ImportButtons(importChat: ((description: string, messages: Messa
             variant="default"
             size="lg"
             className={classNames(
-              'gap-2 bg-bolt-elements-background-depth-1',
+              'gap-2 bg-bolt-elements-button-default-background',
               'text-bolt-elements-textPrimary',
-              'hover:bg-bolt-elements-background-depth-2',
-              'border border-bolt-elements-borderColor',
-              'h-10 px-4 py-2 min-w-[120px] justify-center',
+              'hover:bg-bolt-elements-button-default-backgroundHover',
+              'h-10 px-4 py-2 min-w-[100px] justify-center',
               'transition-all duration-200 ease-in-out',
             )}
           >
             <span className="i-ph:upload-simple w-4 h-4" />
             Import Chat
-          </Button>
+          </Button> */}
           <ImportFolderButton
             importChat={importChat}
             className={classNames(
-              'gap-2 bg-bolt-elements-background-depth-1',
+              'gap-2 bg-bolt-elements-button-default-background',
               'text-bolt-elements-textPrimary',
-              'hover:bg-bolt-elements-background-depth-2',
-              'border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]',
-              'h-10 px-4 py-2 min-w-[120px] justify-center',
+              'hover:bg-bolt-elements-button-default-backgroundHover',
+              'h-10 px-4 py-1 min-w-[100px] justify-center',
               'transition-all duration-200 ease-in-out rounded-lg',
             )}
           />
