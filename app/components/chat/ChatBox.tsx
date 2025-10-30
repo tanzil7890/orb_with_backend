@@ -67,7 +67,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
   return (
     <div
       className={classNames(
-        'relative bg-bolt-elements-background-depth-2 backdrop-blur p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
+        'relative backdrop-blur bg-bolt-elements-button-default-background p-2 md:p-3 rounded-xl w-full max-w-chat mx-auto z-prompt',
 
         /*
          * {
@@ -76,7 +76,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
          */
       )}
     >
-      <svg className={classNames(styles.PromptEffectContainer)}>
+     {/*  <svg className={classNames(styles.PromptEffectContainer)}>
         <defs>
           <linearGradient
             id="line-gradient"
@@ -101,8 +101,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
         </defs>
         <rect className={classNames(styles.PromptEffectLine)} pathLength="100" strokeLinecap="round"></rect>
         <rect className={classNames(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
-      </svg>
-      <div>
+      </svg> */}
+      <div className='mb-2'>
         <ClientOnly>
           {() => (
             <div className={props.isModelSettingsCollapsed ? 'hidden' : ''}>
@@ -117,7 +117,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 apiKeys={props.apiKeys}
                 modelLoading={props.isModelLoading}
               />
-              {(props.providerList || []).length > 0 &&
+              {/* {(props.providerList || []).length > 0 &&
                 props.provider &&
                 (!LOCAL_PROVIDERS.includes(props.provider.name) || 'OpenAILike') && (
                   <APIKeyManager
@@ -127,7 +127,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                       props.onApiKeysChange(props.provider.name, key);
                     }}
                   />
-                )}
+                )} */}
             </div>
           )}
         </ClientOnly>
@@ -167,7 +167,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
         </div>
       )}
       <div
-        className={classNames('relative shadow-xs border border-bolt-elements-borderColor backdrop-blur rounded-lg')}
+        className={classNames('relative shadow-xs  border-[0.3px] border border-bolt-elements-borderColor backdrop-blur rounded-2xl')}
       >
         <textarea
           ref={props.textareaRef}
